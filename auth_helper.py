@@ -1,33 +1,23 @@
 import yaml
-from requests_oauthlib import OAuth2Session
-import os
-import time
-
-print("test")
-
-
-# Load the oauth_settings.yml file
-stream = open('oauth_settings.yml', 'r')
-settings = yaml.load(stream, yaml.SafeLoader)
-print(settings)
-
-authorize_url = '{0}{1}'.format(settings['authority'], settings['authorize_endpoint'])
-print(authorize_url)
-token_url = '{0}{1}'.format(settings['authority'], settings['token_endpoint'])
-print(token_url)
-
-
+import msal
+import logging
+from datetime import datetime
 
 # Method to exchange auth code for access token
-def get_token_from_code(callback_url, expected_state):
-  # Initialize the OAuth client
-  aad_auth = OAuth2Session(settings['app_id'],
-    state=expected_state,
-    scope=settings['scopes'],
-    redirect_uri=settings['redirect'])
+def get_token(settings):
+  dateTimeObj = datetime.now()
+  timestampStr = dateTimeObj.strftime("%d-%b-%Y (%H:%M:%S.%f)")
 
-  token = aad_auth.fetch_token(token_url,
-    client_secret = settings['app_secret'],
-    authorization_response=callback_url)
+  authorize_url = '{0}{1}'.format(settings['authority'], settings['app_id'])
+  logging.info("{}: Authorize URL is {}".format(timestampStr ,authorize_url))
+  app = msal.PublicClientApplication(settings['client_id'], authority = authorize_url)
+  # Initialize the OAuth client
+  try:
+    token = app.acquire_token_by_username_password(settings['username'], 
+                                                   settings['password'], 
+                                                   scopes=settings['scope'])
+    logging.info("{}: Token is {}".format(timestampStr ,token))                                               
+  except:
+    logging.exception("{}: Could not get token".format(timestampStr))
 
   return token
